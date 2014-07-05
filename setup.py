@@ -24,7 +24,7 @@ sync_version()
 
 setup(name                   =  "deimos",
       license                =  "Apache",
-      version                =  read_version(),
+      version                =  "davids custom shit",
       install_requires       =  ["protobuf"],
       description            =  "Mesos containerization hooks for Docker",
       author                 =  "Jason Dusek",

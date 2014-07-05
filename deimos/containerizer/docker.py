@@ -80,7 +80,10 @@ class Docker(Containerizer, _Struct):
         run_options += ["--cidfile", state.resolve("cid")]
 
         place_uris(launchy, self.shared_dir, self.optimistic_unpack)
-        run_options += ["-w", self.workdir]
+        #
+        # replaced the workdir stuff DAVIDBLIU
+        #
+        # run_options += ["-w", self.workdir]
 
         # Docker requires an absolute path to a source filesystem, separated
         # from the bind path in the container with a colon, but the absolute
@@ -123,7 +126,16 @@ class Docker(Containerizer, _Struct):
             # slave.
         else:
             env += mesos_env() + [("MESOS_DIRECTORY", self.workdir)]
-
+        #
+        # debugging stuff TODO DAVIDBLIU remove this
+        #
+        # with open('/home/david/deploy/marathon/deimos_eid_stuff.txt', 'w') as outfile:
+        #     outfile.write(str(state.eid()))
+        #     outfile.write(str(env))
+        #     outfile.write(type(env))
+        #     outfile.write("THAT IS ALL")
+        container_name_addition = [("CONTAINER_NAME", str(state.eid()))]
+        env += container_name_addition
         runner_argv = deimos.docker.run(run_options, image, launchy.argv,
                                         env=env, ports=launchy.ports,
                                         cpus=cpus, mems=mems)
