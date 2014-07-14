@@ -13,19 +13,8 @@ from deimos.err import *
 from deimos.logger import log
 from deimos._struct import _Struct
 
-#
-# for passing container ips into the containers
-#
-import urllib2
-
 
 def run(options, image, command=[], env={}, cpus=None, mems=None, ports=[]):
-    #
-    # find out about options
-    #
-    # with open('/home/david/deploy/marathon/deimos_options.txt', 'w') as out:
-    #     out.write(str(options))
-
     envs = env.items() if isinstance(env, dict) else env
     pairs = [("-e", "%s=%s" % (k, v)) for k, v in envs]
     if ports != []:               # NB: Forces external call to pre-fetch image
@@ -40,15 +29,15 @@ def run(options, image, command=[], env={}, cpus=None, mems=None, ports=[]):
     argv += ["-c", str(cpus)] if cpus else []
     argv += ["-m", str(mems)] if mems else []
     argv += [_ for __ in pairs for _ in __]              # This is just flatten
-    my_ip = urllib2.urlopen('http://ip.42.pl/raw').read()
-    argv += ["-e", "CONTAINER_HOST_ADDRESS="+"10.0.2.15"]
-    argv += [image] + command
 
-    
-    
-    # with open('/home/david/deploy/marathon/deimos_testfile.txt', 'w') as outfile:
-    #     outfile.write('hello my name is david')
-    #     outfile.write(str(argv))
+    #
+    #   add some special sauce
+    #
+    import urllib2
+    my_ip = urllib2.urlopen('http://ip.42.pl/raw').read()
+    argv += ["-e", "CONTAINER_HOST_ADDRESS="+str(my_ip)]
+
+    argv += [image] + command
     return docker(*argv)
 
 

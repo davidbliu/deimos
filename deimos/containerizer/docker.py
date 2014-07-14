@@ -69,20 +69,13 @@ class Docker(Containerizer, _Struct):
         # TODO: if launchy.user:
         #           os.seteuid(launchy.user)
         url, options = self.container_settings.override(*launchy.container)
-        pre, image = re.split(r"^docker:///?", url)
-        if pre != "":
-            raise Err("URL '%s' is not a valid docker:// URL!" % url)
-        if image == "":
-            image = self.default_image(launchy)
+        image = self.determine_image(url, launchy)
         log.info("image  = %s", image)
         run_options += ["--sig-proxy"]
         run_options += ["--rm"]       # This is how we ensure container cleanup
         run_options += ["--cidfile", state.resolve("cid")]
 
         place_uris(launchy, self.shared_dir, self.optimistic_unpack)
-        #
-        # replaced the workdir stuff DAVIDBLIU
-        #
         # run_options += ["-w", self.workdir]
 
         # Docker requires an absolute path to a source filesystem, separated
@@ -126,15 +119,7 @@ class Docker(Containerizer, _Struct):
             # slave.
         else:
             env += mesos_env() + [("MESOS_DIRECTORY", self.workdir)]
-        #
-        # debugging stuff TODO DAVIDBLIU remove this
-        #
-        # with open('/home/david/deploy/marathon/deimos_eid_stuff.txt', 'w') as outfile:
-        #     outfile.write(str(state.eid()))
-        #     outfile.write(str(env))
-        #     outfile.write(type(env))
-        #     outfile.write("THAT IS ALL")
-        container_name_addition = [("CONTAINER_NAME", str(state.eid()))]
+	container_name_addition = [("CONTAINER_NAME", str(state.eid()))]
         env += container_name_addition
         runner_argv = deimos.docker.run(run_options, image, launchy.argv,
                                         env=env, ports=launchy.ports,
@@ -320,10 +305,26 @@ class Docker(Containerizer, _Struct):
                 pass
             return deimos.sig.Resume()
 
-    def default_image(self, launchy):
+    def determine_image(self, url, launchy):
+        opts = dict(self.container_settings.image.items(onlyset=True))
+        if "default" in opts:
+            default = url_to_image(opts["default"])
+        else:
+            default = self.image_from_system_context(launchy)
+        image = url_to_image(url)
+        return default if image == "" else image
+
+    def image_from_system_context(self, launchy):
         opts = dict(self.index_settings.items(onlyset=True))
         if "account_libmesos" in opts:
             if not launchy.needs_observer:
                 opts["account"] = opts["account_libmesos"]
             del opts["account_libmesos"]
         return deimos.docker.matching_image_for_host(**opts)
+
+def url_to_image(url):
+    pre, image = re.split(r"^docker:///?", url)
+    if pre != "":
+        raise Err("URL '%s' is not a valid docker:// URL!" % url)
+    return image
+
